@@ -17,7 +17,7 @@ Requires Node.js 18 or newer.
 ## Quick start
 
 ```bash
-imagelato login            # opens the browser to authorize the CLI
+imagelato login            # browser or API-key login
 imagelato projects list    # your projects with their ids
 imagelato batches list --projectId 64a1f2c9e4b0a1b2c3d4e5f6
 ```
@@ -30,41 +30,68 @@ Found 2 project(s):
 
 ## Authentication
 
-`imagelato login` starts a temporary localhost server, opens your browser to
-app.imagelato.com, and receives the session tokens on the redirect back. If
-the browser does not open, the login URL is printed so you can visit it by
-hand. Tokens are stored in `~/.imagelato/` and refreshed automatically when
-they expire; `imagelato logout` clears them.
+Two ways in; both store credentials in `~/.imagelato/`:
 
-Any other command run without a valid session prints `Please login first` and
-opens the browser itself, so in scripts and non-interactive environments log
-in once beforehand.
+- **Browser** — `imagelato login --browser` starts a temporary localhost
+  server, opens app.imagelato.com, and receives the session tokens on the
+  redirect back. If the browser does not open, the login URL is printed so you
+  can visit it by hand. Tokens refresh automatically when they expire.
+- **API key** — `imagelato login --with-key` prompts (masked) for an API key
+  secret and verifies it with one authenticated call before storing it. Create
+  keys on app.imagelato.com under your project's API keys; new keys default to
+  read-only scopes, so widen the key there before using write commands. The
+  secret is never accepted as a command-line argument.
+
+`imagelato login` with no flag asks which method to use. `imagelato logout`
+clears everything stored.
+
+Headless environments can skip login entirely by exporting the key:
+
+```bash
+export IMAGELATO_API_KEY=<key secret>   # read at request time
+```
+
+A stored login session always wins over a stored or exported API key, so a
+globally-exported `IMAGELATO_API_KEY` never changes which account an
+interactive session talks to.
+
+Without a terminal, a command with no credentials fails immediately with exit
+code 1 and login instructions on stderr — the CLI never opens a browser from
+a non-interactive environment. In an interactive terminal, a command run
+without credentials still opens the browser login itself.
 
 ## Commands
 
 Every resource supports three read modes:
 
 - `list` prints one summary line per record.
-- `get` prints raw colored JSON — pass an id for one record, omit it for the
+- `get` prints every field — pass an id for one record, omit it for the
   whole array.
 - `read` prints one record formatted for the terminal.
+
+Every subcommand also accepts `--json`: strict, parseable JSON on stdout, no
+color. Mutations print a small `{ "ok": true, "id": "…", "name": "…" }`
+result. Failures go to stderr with exit code 1 — as a single JSON line in
+`--json` mode.
 
 Projects and templates resolve by id or name; batches only by id.
 
 ### Session
 
 ```bash
-imagelato login    # log in via browser; tokens land in ~/.imagelato/
-imagelato logout   # clear the stored session
+imagelato login              # choose browser or API key interactively
+imagelato login --browser    # browser flow; tokens land in ~/.imagelato/
+imagelato login --with-key   # masked prompt for an API key secret
+imagelato logout             # clear the stored session and key
 ```
 
 ### Projects
 
 ```bash
-imagelato projects list                    # name and id per project
-imagelato projects get [projectIdOrName]   # raw JSON; omit the id for all projects
-imagelato projects read <projectIdOrName>  # formatted view: locales, timestamps
-imagelato projects create <name>           # create a project
+imagelato projects list [--json]                    # name and id per project
+imagelato projects get [projectIdOrName] [--json]   # every field; omit the id for all projects
+imagelato projects read <projectIdOrName> [--json]  # formatted view: locales, timestamps
+imagelato projects create <name> [--json]           # create a project
 ```
 
 ### Batches
@@ -74,9 +101,9 @@ resized/reformatted variant and its URL. Batches are created by the Imagelato
 API when an image is processed — the CLI reads them.
 
 ```bash
-imagelato batches list [--projectId <id>] [-n 20]                  # most recent
-imagelato batches get [batchId] [--projectId <id>] [-n 20]
-imagelato batches read <batchId>                         # variants, formats, sizes, URLs
+imagelato batches list [--projectId <id>] [-n 20] [--json]         # most recent
+imagelato batches get [batchId] [--projectId <id>] [-n 20] [--json]
+imagelato batches read <batchId> [--json]                # variants, formats, sizes, URLs
 ```
 
 ### Templates
@@ -86,9 +113,9 @@ processing should produce. Formats are from `jpg`, `png`, `webp`, `gif`,
 `svg`; sizes are pixel widths.
 
 ```bash
-imagelato templates list [--projectId <id>]
-imagelato templates get [templateIdOrName] [--projectId <id>]
-imagelato templates read <templateIdOrName>
+imagelato templates list [--projectId <id>] [--json]
+imagelato templates get [templateIdOrName] [--projectId <id>] [--json]
+imagelato templates read <templateIdOrName> [--json]
 imagelato templates add <name> --projectId <id> --formats jpg,webp --sizes 512,256,128,64
 imagelato templates update <templateIdOrName> [--name <new>] [--formats ...] [--sizes ...]
 ```
@@ -97,6 +124,16 @@ imagelato templates update <templateIdOrName> [--name <new>] [--formats ...] [--
 when the flags are omitted, and requires a project id (flag or configuration
 file). Adding the same name twice creates two templates, so check
 `templates list` first. `templates update` replaces only the fields you pass.
+
+### Schema
+
+```bash
+imagelato schema                  # the whole command tree as JSON
+imagelato schema templates add    # one command path only
+```
+
+Prints every command, option, argument, and default as parseable JSON — the
+machine-readable equivalent of `--help`, for agents and tooling.
 
 ### Skills
 
@@ -115,8 +152,8 @@ scans downward from where it runs) supplies the default `--projectId`:
 ```
 
 `IMAGELATO_API_URL` overrides the API endpoint (default
-`https://api.imagelato.com`) — only needed against a non-production
-deployment.
+`https://api.imagelato.com`) and `IMAGELATO_APP_URL` the login page — only
+needed against a non-production deployment.
 
 ## Usage with AI agents
 
@@ -144,8 +181,9 @@ Or paste this into your `AGENTS.md` / `CLAUDE.md`:
 Use the `imagelato` CLI for image-delivery data: projects, processed batches
 with their CDN variants, and resize/reformat templates. Run
 `npx imagelato skills get imagelato` for the full guide, and
-`imagelato --help` for the command reference. Log in once with
-`imagelato login`.
+`imagelato schema` for the command tree as JSON. Add `--json` to any data
+command for parseable output. Authenticate once with `imagelato login`, or
+export `IMAGELATO_API_KEY` in headless environments.
 ```
 
 Prefer a connector? The Imagelato MCP server at
