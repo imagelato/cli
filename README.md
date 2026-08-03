@@ -28,9 +28,20 @@ Found 2 project(s):
 2. product-shots (64a1f2c9e4b0a1b2c3d4e5f7)
 ```
 
+## Signing up
+
+No account yet? Create one from the terminal — the generated password prints
+exactly once, and the session is stored so every other command works
+immediately:
+
+```bash
+imagelato signup --email designer@example.com --json
+```
+
 ## Authentication
 
-Two ways in; both store credentials in `~/.imagelato/`:
+Two ways in for an existing account; both store credentials in
+`~/.imagelato/`:
 
 - **Browser** — `imagelato login --browser` starts a temporary localhost
   server, opens app.imagelato.com, and receives the session tokens on the
@@ -79,6 +90,7 @@ Projects and templates resolve by id or name; batches only by id.
 ### Session
 
 ```bash
+imagelato signup --email designer@example.com   # create an account and log in
 imagelato login              # choose browser or API key interactively
 imagelato login --browser    # browser flow; tokens land in ~/.imagelato/
 imagelato login --with-key   # masked prompt for an API key secret
