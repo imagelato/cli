@@ -1,0 +1,47 @@
+{
+  "name": "imagelato",
+  "version": "1.0.0",
+  "private": false,
+  "description": "imagelato cli to manage projects, batches, and templates",
+  "license": "Apache-2.0",
+  "repository": "github:imagelato/cli",
+  "homepage": "https://www.imagelato.com/developers/",
+  "bugs": "https://github.com/imagelato/cli/issues",
+  "author": "Imagelato",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "bin": {
+    "imagelato": "./dist/index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "node scripts/build.js",
+    "develop": "node index.js",
+    "prepublishOnly": "npm run build",
+    "publish:npm": "npm publish --access public",
+    "publish:repo": "node scripts/publishCli.mjs"
+  },
+  "files": [
+    "dist",
+    "skills"
+  ],
+  "keywords": [
+    "image-processing",
+    "image-resizing",
+    "batches",
+    "templates",
+    "cli"
+  ],
+  "dependencies": {
+    "commander": "8.3.0",
+    "fs-extra": "10.1.0",
+    "node-localstorage": "2.2.1"
+  },
+  "devDependencies": {
+    "@imagelato/client": "0.0.0",
+    "esbuild": "0.25.4",
+    "eslint": "10.8.0"
+  }
+}
